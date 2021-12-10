@@ -1,0 +1,126 @@
+---
+title: "R Homework 2"
+author: "Yichuan Zhang 47-216786"
+date: "10/12/2021"
+output: 
+  pdf_document:
+    fig_caption: yes
+    fig_height: 6
+    fig_width: 7
+    toc: yes
+    toc_depth: 4
+---
+
+# compute percentage college graduate by US state
+
+```{r setup, include=FALSE} 
+knitr::opts_chunk$set(warning = FALSE, message = FALSE) 
+```
+
+```{r}
+library(gapminder)
+library(dplyr)
+library(ggplot2)
+library(ggthemes)
+library(Hmisc)
+library(wesanderson)
+library(ggridges)
+library(griffen)
+```
+
+
+dplyr的基本用法:1）filter 2)select 3)mutate 4)arrange 5)summarise 6)group_by
+
+```{r}
+options(width = 100)
+# show what variables we have
+names(cps)
+```
+
+## select variables
+
+At here we use **select** method.
+```{r}
+options(width = 100)
+# we need to select the variables we need
+new_df <- cps %>% select(state, education_category)
+new_df
+```
+
+## groupby and summarise
+
+At here we use **group_by** and **summarise**
+
+```{r}
+options(width = 100)
+
+# group by the state and educatio_category and count all the categories
+
+#count_df <- new_df %>% group_by(state, education_category) %>% summarise(n = n()).count()
+
+count_df <- count(new_df %>% group_by(state, education_category))
+
+count_df
+```
+
+# Loop to get the graduation rate for each state
+
+At here we need a loop the run for each state, and **mutate** will be used at here
+
+```{r}
+group_df <- count_df %>% filter(state == "Ohio")
+total_number_df <- group_df %>% summarise(total_num = sum(n))
+total_number <- as.integer(total_number_df["total_num"] %>% summarise(total_student = sum(total_num)))
+graduation_rate_df <- count_df %>% filter(state == "Ohio") %>% mutate(graduation_rate=n/total_number)
+graduation_rate_df
+state_graduation_rate <- graduation_rate_df["graduation_rate"][[1]][1]
+```
+
+```{r}
+options(width = 100)
+# get the unique states
+unique_state <- unique(new_df["state"])[[1]]
+# create an empty list
+desired_length <- 1
+graduation_rate <- rep(NA, desired_length)
+
+for (i in unique_state) {
+    group_df <- count_df %>% filter(state == i)
+    total_number_df <- group_df %>% summarise(total_num = sum(n))
+    total_number <- as.integer(total_number_df["total_num"] %>% summarise(total_student = sum(total_num)))
+    graduation_rate_df <- count_df %>% filter(state == i) %>% mutate(graduation_rate=n/total_number)
+    state_graduation_rate <- graduation_rate_df["graduation_rate"][[1]][1]
+    graduation_rate <- c(graduation_rate, state_graduation_rate)
+}
+
+# remove the first na value in the list
+graduation_rate <- graduation_rate[-1]
+graduation_rate
+```
+
+# create the dataframe for drawing the plot
+
+```{r}
+options(width = 100)
+# make a new dataframe
+final_df <- data.frame(unique_state, graduation_rate)
+# order the dataframe
+final_df <- final_df[order(graduation_rate,
+ decreasing = FALSE),]
+# rename the index
+rownames(final_df) <- 1 : length(rownames(final_df))
+# avoid the ggplot sort the geom_point automaticlly
+final_df$unique_state <- factor(final_df$unique_state,
+    levels = final_df$unique_state)
+final_df
+```
+
+# Draw the graph
+```{r}
+
+p <- ggplot(data=final_df,
+ mapping = aes(x=unique_state, y=graduation_rate)) +
+  geom_point() + coord_flip() + labs(y = "College Graduation Rate", x = "")
+p
+```
+

@@ -1,0 +1,116 @@
+---
+title: "R for Empirical Economics Research Homework 2"
+author: Yichuan Zhang (47-216786)
+output: 
+  pdf_document:
+    fig_caption: yes
+    fig_height: 6
+    fig_width: 7
+    toc: yes
+    toc_depth: 4
+---
+
+# Calculation of the state graduation rate
+
+Set up library
+```{r setup, warning=FALSE}
+Sys.setenv(LANG = "en")
+library(dplyr)
+library(ggplot2)
+library(griffen)
+```
+
+
+To see what variables we have
+```{r}
+options(width = 100)
+# show what variables we have
+names(cps)
+```
+
+## dplyr:select
+
+Select the variables we need
+
+```{r}
+options(width = 100)
+# we need to select the variables we need
+new_df <- cps %>% select(state, education_category)
+new_df
+```
+
+## dplyr:group_by
+
+Calculate the frequency of each categorical class for each state
+
+```{r}
+options(width = 100)
+
+# group by the state and educatio_category and count all the categories
+
+#count_df <- new_df %>% group_by(state, education_category) %>% summarise(n = n()).count()
+
+count_df <- count(new_df %>% group_by(state, education_category))
+
+count_df
+```
+
+## dplyr:filter; dplyr:summarise; dplyr:mutate
+
+loop to get graduation rate for each state
+
+```{r, message = FALSE}
+options(width = 100)
+# get the unique states
+unique_state <- unique(new_df["state"])[[1]]
+# create an empty list
+desired_length <- 1
+graduation_rate <- rep(NA, desired_length)
+
+for (i in unique_state) {
+    # group by the dataframe
+    group_df <- count_df %>% filter(state == i)
+    # get the summation of all frequency of (college, others)
+    total_number_df <- group_df %>% summarise(total_num = sum(n))
+    # get the total population in this state
+    total_number <- as.integer(total_number_df["total_num"] %>%
+                    summarise(total_student = sum(total_num)))
+    # get the precentage for each class
+    graduation_rate_df <- count_df %>% filter(state == i) %>%
+                    mutate(graduation_rate = n / total_number)
+    # insert the graduation rate within in a list
+    state_graduation_rate <- graduation_rate_df["graduation_rate"][[1]][1]
+    graduation_rate <- c(graduation_rate, state_graduation_rate)
+}
+
+# remove the first na value in the list
+graduation_rate <- graduation_rate[-1]
+graduation_rate
+```
+
+Make a dataframe for drawing the figure
+
+```{r}
+options(width = 100)
+# make a new dataframe
+final_df <- data.frame(unique_state, graduation_rate)
+# order the dataframe
+final_df <- final_df[order(graduation_rate,
+ decreasing = FALSE),]
+# rename the index
+rownames(final_df) <- 1 : length(rownames(final_df))
+# avoid the ggplot sort the geom_point automaticlly
+final_df$unique_state <- factor(final_df$unique_state,
+    levels = final_df$unique_state)
+final_df
+```
+
+# Draw the figure
+
+```{r, out.height="80%"}
+
+p <- ggplot(data = final_df,
+ mapping = aes(x = unique_state, y = graduation_rate)) +
+  geom_point() + coord_flip() + labs(y = "College Graduation Rate", x = "")
+p
+```
