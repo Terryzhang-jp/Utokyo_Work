@@ -16,6 +16,7 @@ Set up library
 ```{r setup, warning=FALSE}
 Sys.setenv(LANG = "en")
 library(dplyr)
+library(tidyverse)
 library(ggplot2)
 library(griffen)
 ```
@@ -90,6 +91,8 @@ graduation_rate
 
 Make a dataframe for drawing the figure
 
+## used :factor
+
 ```{r}
 options(width = 100)
 # make a new dataframe
@@ -107,10 +110,13 @@ final_df
 
 # Draw the figure
 
+## used :fct_reorder
+
 ```{r, out.height="80%"}
 
 p <- ggplot(data = final_df,
- mapping = aes(x = unique_state, y = graduation_rate)) +
+ mapping = aes(x = fct_reorder(unique_state, graduation_rate, .desc = FALSE),
+          y = graduation_rate)) +
   geom_point() + coord_flip() + labs(y = "College Graduation Rate", x = "")
 p
 ```
